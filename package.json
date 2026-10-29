@@ -1,0 +1,18 @@
+{
+  "name": "merge-policy-gate",
+  "title": "Merge Policy Gate",
+  "description": "Bitbucket custom merge check driven by a policy file in the repository, with a Rovo agent and MCP tools that explain every verdict.",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "index.js",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "lint": "forge lint"
+  },
+  "dependencies": {
+    "@forge/api": "^6.0.0",
+    "@forge/kvs": "^1.0.0"
+  }
+}

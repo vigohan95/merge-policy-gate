@@ -1,0 +1,122 @@
+permissions:
+  scopes:
+    - read:pullrequest:bitbucket
+    - read:repository:bitbucket
+    - storage:app
+modules:
+  bitbucket:mergeCheck:
+    - key: merge-policy-gate-check
+      function: main
+      name: Merge Policy Gate
+      description: Holds a pull request until the repository's MERGE-POLICY.md holds; every verdict cites the rule numbers it relied on.
+      triggers:
+        - on-code-pushed
+        - on-reviewer-status-changed
+        - on-merge
+  rovo:agent:
+    - key: merge-gate-explainer
+      name: Merge Gate Explainer
+      description: Explains why Merge Policy Gate held a Bitbucket pull request, what each rule means, and how to unblock it.
+      prompt: resource:agent-resources;prompts/merge-gate-explainer.md
+      conversationStarters:
+        - Why is pull request 3 in acme/shop held?
+        - What does rule 2.1 mean?
+        - Give me a starter MERGE-POLICY.md for my repository.
+      actions:
+        - evaluate-pull-request
+        - last-verdict
+        - explain-rule
+        - policy-template
+  rovo:mcp:
+    - key: merge-policy-gate-mcp
+      name: Merge Policy Gate
+      tools:
+        - evaluate-pull-request
+        - last-verdict
+        - explain-rule
+        - policy-template
+  action:
+    - key: evaluate-pull-request
+      name: Evaluate a pull request against its merge policy
+      function: fn-evaluate-pr
+      actionVerb: GET
+      description: Evaluate a Bitbucket Cloud pull request against the repository's MERGE-POLICY.md now. Use when asked why a pull request is held or whether it may merge. Returns pass or held, the rules cited, reasons and how to unblock.
+      inputs:
+        workspace:
+          title: Workspace
+          type: string
+          required: true
+          description: The Bitbucket workspace slug or UUID, for example acme
+        repository:
+          title: Repository
+          type: string
+          required: true
+          description: The repository slug or UUID, for example shop
+        pullRequestId:
+          title: Pull request number
+          type: integer
+          required: true
+          description: The pull request id shown in Bitbucket, for example 42
+    - key: last-verdict
+      name: Get the last stored verdict for a pull request
+      function: fn-last-verdict
+      actionVerb: GET
+      description: Return the most recent verdict the merge check stored for a pull request, without re-evaluating. Use when asked what the gate decided last time.
+      inputs:
+        workspace:
+          title: Workspace
+          type: string
+          required: true
+          description: The Bitbucket workspace slug or UUID
+        repository:
+          title: Repository
+          type: string
+          required: true
+          description: The repository slug or UUID
+        pullRequestId:
+          title: Pull request number
+          type: integer
+          required: true
+          description: The pull request id
+    - key: explain-rule
+      name: Explain a merge policy rule
+      function: fn-explain-rule
+      actionVerb: GET
+      description: Explain what a Merge Policy Gate rule (for example 2.1, 3.4, 4.1) means and how to satisfy it. Use when asked about a rule number cited in a verdict.
+      inputs:
+        ruleId:
+          title: Rule id
+          type: string
+          required: true
+          description: The rule number, for example 2.1 or §3.4
+    - key: policy-template
+      name: Get the starter MERGE-POLICY.md
+      function: fn-policy-template
+      actionVerb: GET
+      description: Return the starter MERGE-POLICY.md file and its default values so a repository can opt in. Use when asked how to set up or configure the gate.
+      inputs:
+        format:
+          title: Format
+          type: string
+          required: false
+          description: Optional, markdown (default) or json
+  function:
+    - key: main
+      handler: index.run
+    - key: fn-evaluate-pr
+      handler: index.evaluatePullRequest
+    - key: fn-last-verdict
+      handler: index.lastVerdict
+    - key: fn-explain-rule
+      handler: index.explainRule
+    - key: fn-policy-template
+      handler: index.policyTemplate
+resources:
+  - key: agent-resources
+    path: resources
+app:
+  runtime:
+    name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/d6c929d9-996c-4661-a715-c6dc155b06e3
