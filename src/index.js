@@ -13,6 +13,9 @@ export async function evaluatePR(workspace, repo, prId) {
   const pr = await getPullRequest(workspace, repo, prId);
   const diffstat = await getDiffstat(workspace, repo, prId);
   const facts = summarize(pr, diffstat);
+  // Verdicts are keyed by the repository's slug path (workspace/repo), which is stable whether the caller
+  // passed UUIDs (the merge-check event) or slugs (the agent, the MCP tools, the verdict feed).
+  const fullName = String(pr.destination?.repository?.full_name || `${decodeURIComponent(workspace)}/${decodeURIComponent(repo)}`).toLowerCase();
 
   // The policy is read from the destination branch, so a pull request cannot loosen the rules it is judged by.
   const policyText = facts.destinationCommit ? await getFileAt(workspace, repo, facts.destinationCommit, POLICY_PATH) : null;
@@ -38,8 +41,8 @@ export async function evaluatePR(workspace, repo, prId) {
   const decision = evaluate(policy, { ...facts, dependencyChanges: depChanges, jira });
   const message = verdictMessage(decision, source);
   const record = {
-    workspace,
-    repo,
+    workspace: fullName.split("/")[0],
+    repo: fullName.split("/")[1],
     prId: Number(prId),
     title: facts.title,
     allowed: decision.allowed,
@@ -51,12 +54,15 @@ export async function evaluatePR(workspace, repo, prId) {
     facts: { changedFiles: facts.changedFiles.length, changedLines: facts.changedLines, approvalsByOthers: facts.approvalsByOthers, draft: facts.draft, jira },
     evaluatedAt: new Date().toISOString(),
   };
-  await kvs.set(verdictKey(workspace, repo, prId), record).catch(() => {});
+  await kvs.set(verdictKey(fullName, prId), record).catch(() => {});
   return { decision, facts, policySource: source, message, record };
 }
 
-function verdictKey(workspace, repo, prId) {
-  return `verdict:${workspace}:${repo}:${prId}`;
+function verdictKey(fullName, prId) {
+  return `verdict:${fullName}:${Number(prId)}`;
+}
+function slugKey(workspace, repository, prId) {
+  return verdictKey(`${decodeURIComponent(String(workspace || ""))}/${decodeURIComponent(String(repository || ""))}`.toLowerCase(), prId);
 }
 
 // ---- 1. merge check ------------------------------------------------------------------------
@@ -109,7 +115,7 @@ export async function evaluatePullRequest(payload) {
 /** Action: the last stored verdict (what the merge check decided most recently). */
 export async function lastVerdict(payload) {
   const { workspace, repository, pullRequestId } = payload;
-  const rec = await kvs.get(verdictKey(encodeURIComponent(workspace || ""), encodeURIComponent(repository || ""), pullRequestId));
+  const rec = await kvs.get(slugKey(workspace, repository, pullRequestId));
   if (!rec) return `No stored verdict for ${workspace}/${repository}#${pullRequestId}. Ask me to evaluate it now.`;
   return rec;
 }
@@ -197,7 +203,7 @@ export async function verdictFeed(request) {
       const { record } = await evaluatePR(encodeURIComponent(workspace), encodeURIComponent(repository), prId);
       return json(200, record);
     }
-    const rec = await kvs.get(verdictKey(encodeURIComponent(workspace), encodeURIComponent(repository), prId));
+    const rec = await kvs.get(slugKey(workspace, repository, prId));
     return rec ? json(200, rec) : json(404, { error: "no stored verdict; call with live=1 to evaluate now" });
   } catch (e) {
     return json(502, { error: String(e.message || e) });
