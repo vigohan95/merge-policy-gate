@@ -55,6 +55,11 @@ export async function evaluatePR(workspace, repo, prId) {
     evaluatedAt: new Date().toISOString(),
   };
   await kvs.set(verdictKey(fullName, prId), record).catch((e) => console.error("verdict store failed", e));
+  // Remember uuid -> slugs so the pull-request card (which only sees the repository UUID) can find this repo.
+  const repoUuid = pr.destination?.repository?.uuid;
+  if (repoUuid) {
+    await kvs.set(`repo:${String(repoUuid).replace(/[{}]/g, "")}`, { fullName, workspace: fullName.split("/")[0], repo: fullName.split("/")[1] }).catch(() => {});
+  }
   return { decision, facts, policySource: source, message, record };
 }
 

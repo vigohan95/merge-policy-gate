@@ -13,6 +13,13 @@ modules:
         - on-code-pushed
         - on-reviewer-status-changed
         - on-merge
+  bitbucket:repoPullRequestCard:
+    - key: merge-policy-gate-card
+      title: Merge Policy Gate
+      resource: pr-card
+      render: native
+      resolver:
+        function: fn-resolver
   rovo:agent:
     - key: merge-gate-explainer
       name: Merge Gate Explainer
@@ -104,6 +111,8 @@ modules:
     - key: verdict-feed
       function: fn-verdict-feed
   function:
+    - key: fn-resolver
+      handler: resolvers.handler
     - key: main
       handler: index.run
     - key: fn-evaluate-pr
@@ -117,6 +126,8 @@ modules:
     - key: fn-verdict-feed
       handler: index.verdictFeed
 resources:
+  - key: pr-card
+    path: src/frontend/pr-card.jsx
   - key: agent-resources
     path: resources
 app:
