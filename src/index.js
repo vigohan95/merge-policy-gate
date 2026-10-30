@@ -54,15 +54,16 @@ export async function evaluatePR(workspace, repo, prId) {
     facts: { changedFiles: facts.changedFiles.length, changedLines: facts.changedLines, approvalsByOthers: facts.approvalsByOthers, draft: facts.draft, jira },
     evaluatedAt: new Date().toISOString(),
   };
-  await kvs.set(verdictKey(fullName, prId), record).catch(() => {});
+  await kvs.set(verdictKey(fullName, prId), record).catch((e) => console.error("verdict store failed", e));
   return { decision, facts, policySource: source, message, record };
 }
 
+// Forge KVS keys allow letters, digits, ':', '.', '_', '-', '#' and spaces (no '/'), so the slug path is joined with ':'.
 function verdictKey(fullName, prId) {
-  return `verdict:${fullName}:${Number(prId)}`;
+  return `verdict:${String(fullName).toLowerCase().replace("/", ":")}:${Number(prId)}`;
 }
 function slugKey(workspace, repository, prId) {
-  return verdictKey(`${decodeURIComponent(String(workspace || ""))}/${decodeURIComponent(String(repository || ""))}`.toLowerCase(), prId);
+  return verdictKey(`${decodeURIComponent(String(workspace || ""))}/${decodeURIComponent(String(repository || ""))}`, prId);
 }
 
 // ---- 1. merge check ------------------------------------------------------------------------
