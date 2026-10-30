@@ -100,6 +100,9 @@ modules:
           type: string
           required: false
           description: Optional, markdown (default) or json
+  webtrigger:
+    - key: verdict-feed
+      function: fn-verdict-feed
   function:
     - key: main
       handler: index.run
@@ -111,6 +114,8 @@ modules:
       handler: index.explainRule
     - key: fn-policy-template
       handler: index.policyTemplate
+    - key: fn-verdict-feed
+      handler: index.verdictFeed
 resources:
   - key: agent-resources
     path: resources

@@ -178,3 +178,35 @@ jira_required: false
 \`\`\`
 `;
 }
+
+// ---- 4. web trigger: verdict feed for the Jira-side explainer app --------------------------
+// GET ?workspace=..&repository=..&pr=..[&live=1]   -> stored verdict, or a fresh evaluation with live=1
+// The verdict is already visible to everyone who can see the pull request, so this endpoint carries no
+// secret; it only ever reads. Unknown pull requests return 404.
+export async function verdictFeed(request) {
+  const q = request.queryParameters || {};
+  const workspace = first(q.workspace);
+  const repository = first(q.repository);
+  const prId = first(q.pr);
+  const live = first(q.live) === "1";
+  if (!workspace || !repository || !prId) {
+    return json(400, { error: "workspace, repository and pr are required" });
+  }
+  try {
+    if (live) {
+      const { record } = await evaluatePR(encodeURIComponent(workspace), encodeURIComponent(repository), prId);
+      return json(200, record);
+    }
+    const rec = await kvs.get(verdictKey(encodeURIComponent(workspace), encodeURIComponent(repository), prId));
+    return rec ? json(200, rec) : json(404, { error: "no stored verdict; call with live=1 to evaluate now" });
+  } catch (e) {
+    return json(502, { error: String(e.message || e) });
+  }
+}
+
+function first(v) {
+  return Array.isArray(v) ? v[0] : v;
+}
+function json(statusCode, body) {
+  return { statusCode, headers: { "Content-Type": ["application/json"] }, body: JSON.stringify(body) };
+}
