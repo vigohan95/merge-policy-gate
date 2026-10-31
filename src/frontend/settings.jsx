@@ -3,6 +3,7 @@ import ForgeReconciler, { Box, Button, CodeBlock, Heading, Inline, Lozenge, Sect
 import { invoke } from "@forge/bridge";
 
 const rowStyle = xcss({ paddingBlock: "space.075", borderBottomWidth: "border.width", borderBottomStyle: "solid", borderColor: "color.border" });
+const badgeStyle = xcss({ minWidth: "4rem" });
 
 function slugsFrom(context) {
   const m = /bitbucket\.org\/([^/]+)\/([^/]+)\//.exec(String(context?.extension?.location || ""));
@@ -94,7 +95,7 @@ function App() {
                     </Inline>
                     {rec ? (
                       <Inline space="space.100" alignBlock="center">
-                        <Lozenge appearance={rec.allowed ? "success" : "removed"} isBold maxWidth={90}>{rec.allowed ? "PASS" : "HELD"}</Lozenge>
+                        <Box xcss={badgeStyle}><Lozenge appearance={rec.allowed ? "success" : "removed"} isBold maxWidth={90}>{rec.allowed ? "PASS" : "HELD"}</Lozenge></Box>
                         <Text>{rec.allowed ? `rules=[${rec.rules.join(", ")}]` : rec.reasons.join(" · ")}</Text>
                       </Inline>
                     ) : null}
