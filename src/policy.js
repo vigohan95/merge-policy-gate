@@ -2,7 +2,8 @@
 //
 // A repository opts in by committing MERGE-POLICY.md with a fenced block:
 //
-//   ```yaml merge-policy
+//   ```yaml
+//   # merge-policy
 //   protected_paths: ["Dockerfile", ".github/**"]
 //   ...
 //   ```
@@ -35,7 +36,12 @@ export const DEFAULT_POLICY = Object.freeze({
   jira_required: false,
 });
 
-const BLOCK_RE = /```yaml\s+merge-policy\s*\n([\s\S]*?)```/;
+// Two spellings are accepted: an info string (```yaml merge-policy) or a first-line comment (```yaml then "# merge-policy").
+// Bitbucket's Markdown renderer collapses fences whose info string has a space, so the starter uses the comment form.
+const BLOCK_RE = /```yaml(?:[ 	]+merge-policy[ 	]*?
+|[ 	]*?
+[ 	]*#[ 	]*merge-policy[ 	]*?
+)([\s\S]*?)```/;
 
 /** Parse the fenced policy block out of MERGE-POLICY.md. Returns DEFAULT_POLICY when absent. */
 export function parsePolicy(markdown) {
