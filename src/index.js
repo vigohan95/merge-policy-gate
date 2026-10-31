@@ -210,7 +210,8 @@ Edit the block below; the prose above it is for people. Each verdict cites the r
 - §3.6 A human approval is an Approved review from someone other than the author.
 - §4.1 The linked Jira work item must be in an allowed status.
 
-\`\`\`yaml merge-policy
+\`\`\`yaml
+# merge-policy
 protected_paths: ["Dockerfile", ".dockerignore", "bitbucket-pipelines.yml", ".github/**", "MERGE-POLICY.md", "LICENSE"]
 dependency_files: ["requirements.txt", "requirements-dev.txt", "pyproject.toml", "package.json"]
 dependency_bumps:

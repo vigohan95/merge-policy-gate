@@ -108,3 +108,12 @@ test("verdict message cites rules", () => {
   assert.ok(m.includes("§2.1 protected paths"));
   assert.ok(m.includes("rules=["));
 });
+
+test("policy block: info-string form and first-line comment form both parse", () => {
+  const a = parsePolicy("# x\n```yaml merge-policy\nblock_drafts: false\n```\n");
+  const b = parsePolicy("# x\n```yaml\n# merge-policy\nblock_drafts: false\n```\n");
+  const c = parsePolicy("# x\n```yaml\nblock_drafts: false\n```\n");
+  assert.equal(a.policy.block_drafts, false);
+  assert.equal(b.policy.block_drafts, false);
+  assert.equal(c.source, "default");
+});

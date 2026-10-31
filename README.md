@@ -46,7 +46,8 @@ Every verdict ends with `rules=[…]`, the list of rules that were evaluated, an
 - §3.4 Size limits keep automatic merges reviewable.
 - §3.5 Drafts do not merge.
 
-```yaml merge-policy
+```yaml
+# merge-policy
 protected_paths: ["Dockerfile", ".dockerignore", "bitbucket-pipelines.yml", ".github/**", "MERGE-POLICY.md", "LICENSE"]
 dependency_files: ["requirements.txt", "requirements-dev.txt", "pyproject.toml", "package.json"]
 dependency_bumps:

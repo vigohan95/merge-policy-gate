@@ -38,10 +38,7 @@ export const DEFAULT_POLICY = Object.freeze({
 
 // Two spellings are accepted: an info string (```yaml merge-policy) or a first-line comment (```yaml then "# merge-policy").
 // Bitbucket's Markdown renderer collapses fences whose info string has a space, so the starter uses the comment form.
-const BLOCK_RE = /```yaml(?:[ 	]+merge-policy[ 	]*?
-|[ 	]*?
-[ 	]*#[ 	]*merge-policy[ 	]*?
-)([\s\S]*?)```/;
+const BLOCK_RE = /```yaml(?:[ \t]+merge-policy[ \t]*\r?\n|[ \t]*\r?\n[ \t]*#[ \t]*merge-policy[ \t]*\r?\n)([\s\S]*?)```/;
 
 /** Parse the fenced policy block out of MERGE-POLICY.md. Returns DEFAULT_POLICY when absent. */
 export function parsePolicy(markdown) {
