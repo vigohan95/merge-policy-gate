@@ -20,6 +20,13 @@ modules:
       render: native
       resolver:
         function: fn-resolver
+  bitbucket:repoSettingsMenuPage:
+    - key: merge-policy-gate-settings
+      title: Merge Policy Gate
+      resource: settings-page
+      render: native
+      resolver:
+        function: fn-resolver
   rovo:agent:
     - key: merge-gate-explainer
       name: Merge Gate Explainer
@@ -126,6 +133,8 @@ modules:
     - key: fn-verdict-feed
       handler: index.verdictFeed
 resources:
+  - key: settings-page
+    path: src/frontend/settings.jsx
   - key: pr-card
     path: src/frontend/pr-card.jsx
   - key: agent-resources

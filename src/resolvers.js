@@ -93,6 +93,14 @@ const definitions = {
   const { policy, source } = parsePolicy(text);
   return { state: "ok", repo, branch, found: text !== null, source, policy, template: policyTemplateText() };
   },
+
+  /** Settings page: open pull requests for the dry-run list. */
+  async listOpenPrs({ payload }) {
+    const repo = await resolveRepo(payload.repoUuid, payload.workspace, payload.repo);
+    if (!repo) return [];
+    const data = await api.asApp().requestBitbucket(route`/2.0/repositories/${repo.workspace}/${repo.repo}/pullrequests?state=OPEN&pagelen=20`).then((r) => (r.ok ? r.json() : { values: [] }));
+    return (data.values || []).map((pr) => ({ id: pr.id, title: pr.title, author: pr.author?.display_name || pr.author?.nickname || "", source: pr.source?.branch?.name, destination: pr.destination?.branch?.name, updated: pr.updated_on }));
+  },
 };
 
 export const handler = makeResolver(definitions);
