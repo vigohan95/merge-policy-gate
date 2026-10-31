@@ -3,6 +3,8 @@ import ForgeReconciler, { Box, Button, Heading, Inline, Lozenge, Spinner, Stack,
 import { invoke } from "@forge/bridge";
 
 const rowStyle = xcss({ paddingBlock: "space.050", borderBottomWidth: "border.width", borderBottomStyle: "solid", borderColor: "color.border" });
+// Keeps the status lozenge from being squeezed to "H.." by the flex row.
+const badgeStyle = xcss({ minWidth: "4rem" });
 
 function RuleRow({ row }) {
   const appearance = row.status === "held" ? "removed" : row.status === "ok" ? "success" : "default";
@@ -10,7 +12,7 @@ function RuleRow({ row }) {
   return (
     <Box xcss={rowStyle}>
       <Inline space="space.100" alignBlock="start">
-        <Lozenge appearance={appearance} maxWidth={90}>{label}</Lozenge>
+        <Box xcss={badgeStyle}><Lozenge appearance={appearance} isBold maxWidth={90}>{label}</Lozenge></Box>
         <Stack space="space.0">
           <Text><Strong>{row.rule}</Strong> {row.text}</Text>
           {row.reason ? <Text>{row.reason}</Text> : null}
