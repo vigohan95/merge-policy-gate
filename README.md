@@ -79,6 +79,10 @@ of `key: value` nesting. Nothing in the policy file is executed.
   returns the stored verdict, or evaluates now with `live=1`. The Jira-side Merge Gate Explainer reads this.
   Verdicts contain nothing that is not already visible on the pull request.
 
+  A ready-made skill file for coding agents (Claude Code, Codex and other MCP clients) lives in
+  [`skills/merge-policy-gate/SKILL.md`](skills/merge-policy-gate/SKILL.md): when to call which tool, how to plan a
+  change so it passes, and the rule catalogue. The judge guide is [`JUDGES.md`](JUDGES.md).
+
 ## Scopes
 
 `read:pullrequest:bitbucket` (pull request, diffstat), `read:repository:bitbucket` (policy and dependency files
