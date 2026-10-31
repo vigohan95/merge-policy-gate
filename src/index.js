@@ -9,7 +9,7 @@ import { getPullRequest, getDiffstat, getFileAt, summarize } from "./bitbucket.j
 const POLICY_PATH = "MERGE-POLICY.md";
 
 /** Evaluate a pull request end to end. Returns { decision, facts, policySource, message }. */
-export async function evaluatePR(workspace, repo, prId) {
+export async function evaluatePR(workspace, repo, prId, opts = {}) {
   const pr = await getPullRequest(workspace, repo, prId);
   const diffstat = await getDiffstat(workspace, repo, prId);
   const facts = summarize(pr, diffstat);
@@ -34,9 +34,11 @@ export async function evaluatePR(workspace, repo, prId) {
 
   // Linked Jira work item key from the branch name or the title. A Bitbucket-scoped Forge app cannot also
   // hold Jira site scopes, so the status check (jira_allowed_statuses) runs only when a status is supplied
-  // by the caller (the MCP tool accepts one); the merge check itself enforces key presence (jira_required).
+  // by the caller (the MCP tool, the agent action and the verdict feed accept `jiraStatus`; the Jira-side
+  // explainer app reads it from the Teamwork Graph); the merge check itself enforces key presence (jira_required).
   const jiraKey = findJiraKey(facts.sourceBranch, facts.title);
-  const jira = jiraKey ? { key: jiraKey, found: true, status: null } : null;
+  const jiraStatus = opts.jiraStatus ? String(opts.jiraStatus) : null;
+  const jira = jiraKey ? { key: jiraKey, found: true, status: jiraStatus } : null;
 
   const decision = evaluate(policy, { ...facts, dependencyChanges: depChanges, jira });
   const message = verdictMessage(decision, source);
@@ -60,7 +62,41 @@ export async function evaluatePR(workspace, repo, prId) {
   if (repoUuid) {
     await kvs.set(`repo:${String(repoUuid).replace(/[{}]/g, "")}`, { fullName, workspace: fullName.split("/")[0], repo: fullName.split("/")[1] }).catch(() => {});
   }
+  // Index by Jira key so "which pull requests of KAN-3 are held?" is one lookup (feed ?jira=KAN-3, the explainer
+  // agent, Jira Automation). The index holds pointers only; the verdict record stays the single source of truth.
+  if (jiraKey) await indexByJira(jiraKey, fullName, prId, record).catch((e) => console.error("jira index failed", e));
   return { decision, facts, policySource: source, message, record };
+}
+
+function jiraKeyIndex(key) {
+  return `jira:${String(key).toUpperCase()}`;
+}
+async function indexByJira(key, fullName, prId, record) {
+  const idx = (await kvs.get(jiraKeyIndex(key)).catch(() => null)) || { key: String(key).toUpperCase(), pullRequests: {} };
+  idx.pullRequests[`${fullName}#${Number(prId)}`] = {
+    workspace: fullName.split("/")[0],
+    repo: fullName.split("/")[1],
+    prId: Number(prId),
+    title: record.title,
+    allowed: record.allowed,
+    violated: record.violated,
+    evaluatedAt: record.evaluatedAt,
+  };
+  idx.updatedAt = record.evaluatedAt;
+  await kvs.set(jiraKeyIndex(key), idx);
+}
+
+/** Every pull request the gate has evaluated for a Jira work item, newest first, with its stored verdict. */
+export async function pullRequestsForJira(key) {
+  const idx = await kvs.get(jiraKeyIndex(key)).catch(() => null);
+  if (!idx) return { key: String(key).toUpperCase(), pullRequests: [] };
+  const entries = Object.values(idx.pullRequests || {}).sort((a, b) => String(b.evaluatedAt).localeCompare(String(a.evaluatedAt)));
+  const pullRequests = [];
+  for (const e of entries) {
+    const rec = await kvs.get(verdictKey(`${e.workspace}/${e.repo}`, e.prId)).catch(() => null);
+    pullRequests.push(rec || e);
+  }
+  return { key: idx.key, updatedAt: idx.updatedAt, pullRequests };
 }
 
 // Forge KVS keys allow letters, digits, ':', '.', '_', '-', '#' and spaces (no '/'), so the slug path is joined with ':'.
@@ -102,7 +138,7 @@ export async function evaluatePullRequest(payload) {
   const ws = encodeURIComponent(workspace);
   const rp = encodeURIComponent(repository);
   try {
-    const { record } = await evaluatePR(ws, rp, pullRequestId);
+    const { record } = await evaluatePR(ws, rp, pullRequestId, { jiraStatus: payload.jiraStatus });
     return {
       verdict: record.allowed ? "pass" : "held",
       pullRequest: `${workspace}/${repository}#${pullRequestId}`,
@@ -192,21 +228,27 @@ jira_required: false
 }
 
 // ---- 4. web trigger: verdict feed for the Jira-side explainer app --------------------------
-// GET ?workspace=..&repository=..&pr=..[&live=1]   -> stored verdict, or a fresh evaluation with live=1
+// GET ?workspace=..&repository=..&pr=..[&live=1][&jiraStatus=..]  -> stored verdict, or a fresh evaluation with live=1
+// GET ?jira=KAN-3                                                 -> every evaluated pull request of that work item
 // The verdict is already visible to everyone who can see the pull request, so this endpoint carries no
 // secret; it only ever reads. Unknown pull requests return 404.
 export async function verdictFeed(request) {
   const q = request.queryParameters || {};
+  const jiraKey = first(q.jira);
+  if (jiraKey) {
+    if (!/^[A-Z][A-Z0-9]{1,9}-\d+$/.test(String(jiraKey).toUpperCase())) return json(400, { error: "jira must be a work item key like KAN-3" });
+    return json(200, await pullRequestsForJira(jiraKey));
+  }
   const workspace = first(q.workspace);
   const repository = first(q.repository);
   const prId = first(q.pr);
   const live = first(q.live) === "1";
   if (!workspace || !repository || !prId) {
-    return json(400, { error: "workspace, repository and pr are required" });
+    return json(400, { error: "workspace, repository and pr are required (or jira=KEY)" });
   }
   try {
     if (live) {
-      const { record } = await evaluatePR(encodeURIComponent(workspace), encodeURIComponent(repository), prId);
+      const { record } = await evaluatePR(encodeURIComponent(workspace), encodeURIComponent(repository), prId, { jiraStatus: first(q.jiraStatus) });
       return json(200, record);
     }
     const rec = await kvs.get(slugKey(workspace, repository, prId));

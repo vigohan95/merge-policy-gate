@@ -10,7 +10,7 @@ function RuleRow({ row }) {
   return (
     <Box xcss={rowStyle}>
       <Inline space="space.100" alignBlock="start">
-        <Lozenge appearance={appearance} maxWidth={60}>{label}</Lozenge>
+        <Lozenge appearance={appearance} maxWidth={90}>{label}</Lozenge>
         <Stack space="space.0">
           <Text><Strong>{row.rule}</Strong> {row.text}</Text>
           {row.reason ? <Text>{row.reason}</Text> : null}

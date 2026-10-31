@@ -94,7 +94,7 @@ function App() {
                     </Inline>
                     {rec ? (
                       <Inline space="space.100" alignBlock="center">
-                        <Lozenge appearance={rec.allowed ? "success" : "removed"} isBold maxWidth={60}>{rec.allowed ? "PASS" : "HELD"}</Lozenge>
+                        <Lozenge appearance={rec.allowed ? "success" : "removed"} isBold maxWidth={90}>{rec.allowed ? "PASS" : "HELD"}</Lozenge>
                         <Text>{rec.allowed ? `rules=[${rec.rules.join(", ")}]` : rec.reasons.join(" · ")}</Text>
                       </Inline>
                     ) : null}

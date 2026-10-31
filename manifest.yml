@@ -71,6 +71,11 @@ modules:
           type: integer
           required: true
           description: The pull request id shown in Bitbucket, for example 42
+        jiraStatus:
+          title: Jira work item status
+          type: string
+          required: false
+          description: Optional. Current status of the linked Jira work item (for example In Review); when given, the policy's jira_allowed_statuses rule (§4.1) is checked too
     - key: last-verdict
       name: Get the last stored verdict for a pull request
       function: fn-last-verdict
